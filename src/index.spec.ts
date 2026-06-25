@@ -41,6 +41,17 @@ describe("parseRange(len, str)", function () {
     assert.strictEqual(parse(200, "bytes=100-15b0"), -2);
   });
 
+  it("should use the whole representation when suffix-length exceeds size (RFC 9110 §14.1.2)", function () {
+    assert.deepEqual(
+      parse(200, "bytes=-500"),
+      Object.assign([{ start: 0, end: 199 }], { type: "bytes" }),
+    );
+  });
+
+  it("should return -1 for a zero-length suffix range", function () {
+    assert.strictEqual(parse(200, "bytes=-0"), -1);
+  });
+
   it("should return -1 for unsatisfiable range", function () {
     assert.strictEqual(parse(200, "bytes=500-600"), -1);
   });
@@ -163,6 +174,51 @@ describe("parseRange(len, str)", function () {
       range,
       Object.assign([{ start: 0, end: 5 }], { type: "items" }),
     );
+  });
+
+  describe("RFC 9110 §14.1.2 examples (representation length 10000)", function () {
+    it("should parse the first and last bytes only: bytes=0-0,-1", function () {
+      assert.deepEqual(
+        parse(10000, "bytes=0-0,-1"),
+        Object.assign(
+          [
+            { start: 0, end: 0 },
+            { start: 9999, end: 9999 },
+          ],
+          {
+            type: "bytes",
+          },
+        ),
+      );
+    });
+
+    it("should parse the first, middle, and last 1000 bytes", function () {
+      assert.deepEqual(
+        parse(10000, "bytes= 0-999, 4500-5499, -1000"),
+        Object.assign(
+          [
+            { start: 0, end: 999 },
+            { start: 4500, end: 5499 },
+            { start: 9000, end: 9999 },
+          ],
+          { type: "bytes" },
+        ),
+      );
+    });
+
+    it("should parse the final 500 bytes: bytes=-500", function () {
+      assert.deepEqual(
+        parse(10000, "bytes=-500"),
+        Object.assign([{ start: 9500, end: 9999 }], { type: "bytes" }),
+      );
+    });
+
+    it("should parse the final 500 bytes via int-range: bytes=9500-", function () {
+      assert.deepEqual(
+        parse(10000, "bytes=9500-"),
+        Object.assign([{ start: 9500, end: 9999 }], { type: "bytes" }),
+      );
+    });
   });
 
   describe("when combine: true", function () {

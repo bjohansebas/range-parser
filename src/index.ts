@@ -72,6 +72,12 @@ function rangeParser(size: number, str: string, options?: rangeParser.Options) {
     if (startStr.length === 0) {
       start = size - end;
       end = size - 1;
+
+      // a representation shorter than the suffix-length yields the whole
+      // representation (RFC 9110 §14.1.2)
+      if (start < 0) {
+        start = 0;
+      }
     } else if (endStr.length === 0) {
       end = size - 1;
     }
